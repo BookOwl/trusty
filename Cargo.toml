@@ -1,0 +1,10 @@
+[package]
+name = "trusty"
+version = "0.1.0"
+authors = ["BookOwl <stanleybookowl@gmail.com>"]
+
+[dependencies]
+termion = "1.0"
+syntect = "1.0"
+regex = "0.2"
+left-pad = "1.0"
