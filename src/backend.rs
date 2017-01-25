@@ -2,10 +2,20 @@ use std::io;
 use std::io::{Read, Write, Error ,ErrorKind};
 use std::fs::File;
 
-pub struct Backend;
+pub struct Backend {
+    buffers: Vec<Buffer>,
+    current: usize,
+}
+
 impl Backend {
     pub fn new() -> Backend {
-        Backend {}
+        Backend {
+            buffers: vec![Buffer::from_file(String::from("test.txt")).unwrap()],
+            current: 0,
+        }
+    }
+    pub fn current_lines(&self) -> &Vec<String> {
+        &self.buffers[self.current].lines
     }
 }
 

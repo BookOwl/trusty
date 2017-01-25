@@ -26,7 +26,7 @@ impl<'a> Editor<'a> {
         for event in stdin().events() {
             self.draw();
             match event {
-                Ok(Event::Key(Key::Char('q'))) => break,
+                Ok(Event::Key(Key::Esc)) => break,
                 Err(_) => break,
                 _ => {},
             }
@@ -35,6 +35,8 @@ impl<'a> Editor<'a> {
     fn draw(&mut self) {
         self.frontend.clear_screen();
         self.frontend.draw_line_numbers(&self.pos);
+        self.frontend.draw_lines(&self.pos, &self.backend.current_lines());
+        self.frontend.hide_cursor();
         self.frontend.flush();
     }
 }

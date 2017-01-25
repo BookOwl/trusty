@@ -14,6 +14,7 @@ pub struct Frontend {
 }
 
 impl Frontend {
+    /// Creates a new Frontend
     pub fn new() -> Frontend {
         let in_ = stdin();
         let out = stdout().into_raw_mode().unwrap();
@@ -22,11 +23,13 @@ impl Frontend {
             stdout: out,
         }
     }
+    /// Clears the screen
     pub fn clear_screen(&mut self) {
         write!(self.stdout, "{}", clear::All).unwrap();
     }
+    /// Draws the line numbers on the side of the screen
     pub fn draw_line_numbers(&mut self, pos: &Cursor) {
-        let (width, height) = termion::terminal_size().unwrap();
+        let (_, height) = termion::terminal_size().unwrap();
         for (y, line_number) in (pos.line..pos.line+(height as usize)).enumerate() {
             self.goto(0, y as u16);
             write!(self.stdout, "{}{}{}",
@@ -37,11 +40,31 @@ impl Frontend {
 
         }
     }
+    pub fn draw_lines(&mut self, pos: &Cursor, lines: &Vec<String>) {
+        let (_, height) = termion::terminal_size().unwrap();
+        let num_lines = lines.len();
+        for (y, line_number) in (pos.line..pos.line+(height as usize)).enumerate() {
+            if line_number >= num_lines {
+                break;
+            }
+            self.goto(5, y as u16);
+            write!(self.stdout, "{}", lines[line_number]).unwrap();
+        }
+    }
+    /// Flushes stdout to make the changes show
     pub fn flush(&mut self) {
         self.stdout.flush().unwrap();
     }
-    // Private methods
-    fn goto(&mut self, x: u16, y: u16) {
+    /// Hides the cursor
+    pub fn hide_cursor(&mut self) {
+        write!(self.stdout, "{}", termion::cursor::Hide{}).unwrap();
+    }
+    /// Shows the cursor
+    pub fn show_cursor(&mut self) {
+        write!(self.stdout, "{}", termion::cursor::Show{}).unwrap();
+    }
+    /// Moves the cursor to x, y, which are both 0 based
+    pub fn goto(&mut self, x: u16, y: u16) {
         write!(self.stdout, "{}", termion::cursor::Goto(x+1, y+1)).unwrap();
     }
 }
@@ -51,6 +74,7 @@ impl Drop for Frontend {
     fn drop(&mut self) {
         self.clear_screen();
         self.goto(0, 0);
+        self.show_cursor();
         self.flush();
     }
 }
