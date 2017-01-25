@@ -11,7 +11,10 @@ pub struct Backend {
 impl Backend {
     pub fn new() -> Backend {
         Backend {
-            buffers: vec![Buffer::from_file(String::from("test.txt")).unwrap()],
+            buffers: vec![Buffer::from_file(
+                ::std::env::args().nth(1).unwrap_or(String::from("test.txt"))
+                //String::from("test2.txt")
+            ).unwrap()],
             current: 0,
         }
     }
