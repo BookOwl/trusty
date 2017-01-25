@@ -1,6 +1,7 @@
 use std::io;
 use std::io::{Read, Write, Error ,ErrorKind};
 use std::fs::File;
+use cursor::Cursor;
 
 pub struct Backend {
     buffers: Vec<Buffer>,
@@ -14,14 +15,31 @@ impl Backend {
             current: 0,
         }
     }
-    pub fn current_lines(&self) -> &Vec<String> {
-        &self.buffers[self.current].lines
+    pub fn current_lines(&mut self) -> &Vec<String> {
+        &self.current_buffer().lines
     }
-    pub fn number_of_lines(&self) -> usize {
-        self.buffers[self.current].lines.len()
+    pub fn number_of_lines(&mut self) -> usize {
+        self.current_buffer().lines.len()
     }
-    pub fn current_line_length(&self, line: usize) -> usize {
-        self.buffers[self.current].lines[line].len()
+    pub fn current_line_length(&mut self, line: usize) -> usize {
+        self.current_buffer().lines[line].len()
+    }
+    /// Inserts a newline
+    pub fn newline(&mut self, cursor: &mut Cursor) {
+        // TODO
+    }
+    /// Handles Backspace
+    pub fn backspace(&mut self, cursor: &mut Cursor) {
+        // TODO
+    }
+    /// Inserts a character
+    pub fn insert(&mut self, c: char, cursor: &mut Cursor) {
+        self.current_buffer().insert_char(c, cursor.line as usize, cursor.column as usize);
+        cursor.column += 1;
+    }
+    /// Returns the current buffer
+    pub fn current_buffer(&mut self) -> &mut Buffer {
+        &mut self.buffers[self.current]
     }
 }
 
@@ -80,5 +98,10 @@ impl Buffer {
     /// Returns a line of text as a String
     pub fn get_line(&self, index: usize) -> &String {
         &self.lines[index]
+    }
+    /// Inserts a char at a specific line, column
+    pub fn insert_char(&mut self, c: char, line: usize, column: usize) {
+        // TODO fix for unicode
+        self.lines[line].insert(column, c);
     }
 }
