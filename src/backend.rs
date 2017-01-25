@@ -17,6 +17,12 @@ impl Backend {
     pub fn current_lines(&self) -> &Vec<String> {
         &self.buffers[self.current].lines
     }
+    pub fn number_of_lines(&self) -> usize {
+        self.buffers[self.current].lines.len()
+    }
+    pub fn current_line_length(&self, line: usize) -> usize {
+        self.buffers[self.current].lines[line].len()
+    }
 }
 
 /// A Buffer contains the text being edited and applies the edits to it.
