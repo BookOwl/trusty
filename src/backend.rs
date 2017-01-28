@@ -3,44 +3,61 @@ use std::io::{Read, Write, Error ,ErrorKind};
 use std::fs::File;
 use cursor::Cursor;
 
+/// The Backend is responsible opening files and editing text.
+/// It does this by managing a Vec of Buffers that actually edit the text.
+/// By making the Backend handle the Buffers, the rest of the editor doesn't have to
+/// worry about using the right buffer.
 pub struct Backend {
+    /// The Buffers being edited
     buffers: Vec<Buffer>,
+    /// The index of the current Buffer
     current: usize,
 }
 
 impl Backend {
+    /// Constructs and returns a new Backend from the command line arguments
     pub fn new() -> Backend {
         Backend {
             buffers: vec![Buffer::from_file(
+                // TODO: Replace with real argument parsing. In editor.rs, maybe?
                 ::std::env::args().nth(1).unwrap_or(String::from("test.txt"))
-                //String::from("test2.txt")
             ).unwrap()],
             current: 0,
         }
     }
+    /// Returns the lines of text from the buffer that is being edited
+    // TODO: Make this higher level so that it is easier to change
+    // the buffer representation? Maybe as an iterator?
     pub fn current_lines(&mut self) -> &Vec<String> {
         &self.current_buffer().lines
     }
+    /// Returns the number of lines in the current buffer.
     pub fn number_of_lines(&mut self) -> usize {
         self.current_buffer().lines.len()
     }
-    pub fn current_line_length(&mut self, line: usize) -> usize {
+    /// Returns the length of the line in the current buffer
+    pub fn length_of_line(&mut self, line: usize) -> usize {
         self.current_buffer().lines[line].len()
     }
-    /// Inserts a newline
-    pub fn newline(&mut self, cursor: &mut Cursor) {
+    /// Inserts a newline at the position given by the Cursor and updates
+    /// the Cursor to reflect the new position
+    pub fn insert_newline(&mut self, cursor: &mut Cursor) {
         // TODO
     }
-    /// Handles Backspace
-    pub fn backspace(&mut self, cursor: &mut Cursor) {
+    /// Inserts a backspace at the position given by the Cursor and updates
+    /// the Cursor to reflect the new position
+    pub fn insert_backspace(&mut self, cursor: &mut Cursor) {
         // TODO
     }
-    /// Inserts a character
-    pub fn insert(&mut self, c: char, cursor: &mut Cursor) {
+    /// Inserts a character at the position given by the Cursor and updates
+    /// the Cursor to reflect the new position
+    pub fn insert_char(&mut self, c: char, cursor: &mut Cursor) {
+        // BUG: Doesn't work for most non-ascii utf8 text. :(
         self.current_buffer().insert_char(c, cursor.line as usize, cursor.column as usize);
         cursor.column += 1;
     }
     /// Returns the current buffer
+    // TODO: Does this need to be public?
     pub fn current_buffer(&mut self) -> &mut Buffer {
         &mut self.buffers[self.current]
     }
