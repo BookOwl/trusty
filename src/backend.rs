@@ -42,7 +42,6 @@ impl Backend {
     /// Inserts a newline at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
     pub fn insert_newline_at(&mut self, cursor: &mut Cursor) {
-        // TODO
         let line_len = self.length_of_line(cursor.line);
         let mut buf = self.current_buffer();
         buf.split_line_into_two_at(cursor.line, cursor.column);
@@ -54,6 +53,22 @@ impl Backend {
     /// the Cursor to reflect the new position
     pub fn insert_backspace_at(&mut self, cursor: &mut Cursor) {
         // TODO
+        if cursor.column == 0 && cursor.line == 0 {
+            // We are at the top left corner and there is nothing to delete.
+            return;
+        }
+        let mut buf = self.current_buffer();
+        if cursor.column == 0 {
+            cursor.column = buf.lines[cursor.line - 1].len();
+            buf.join_lines_at(cursor.line);
+            cursor.line -= 1;
+        } else {
+            // We remove the char at the column before the cursor because
+            // when you use backspace you are trying to delete what
+            // comes before.
+            buf.delete_char_at(cursor.line, cursor.column - 1);
+            cursor.column -= 1;
+        }
     }
     /// Inserts a character at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
@@ -148,5 +163,15 @@ impl Buffer {
     pub fn insert_char_at(&mut self, c: char, line: usize, column: usize) {
         // TODO fix for unicode
         self.lines[line].insert(column, c);
+    }
+    /// Moves the line at `line` into the line before it and removes it.
+    pub fn join_lines_at(&mut self, line: usize) {
+        assert!(line >= 1, "Tried to move first line to the -1 line!");
+        let s = self.lines.remove(line);
+        self.lines[line - 1].push_str(&s);
+    }
+    /// Deletes the character at `line`, `column`.
+    pub fn delete_char_at(&mut self, line: usize, column: usize) {
+        self.lines[line].remove(column);
     }
 }
