@@ -47,7 +47,7 @@ impl Cursor {
     pub fn move_right(&mut self, lines: &[String]) {
         let line_len = lines[self.line].len();
         // If we are at the bottom right corner...
-        if self.column + 1 == line_len && self.line + 1 == lines.len() {
+        if self.column == line_len && self.line + 1 == lines.len() {
             // return without doing anything
             return;
         }

@@ -41,19 +41,25 @@ impl Backend {
     }
     /// Inserts a newline at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_newline(&mut self, cursor: &mut Cursor) {
+    pub fn insert_newline_at(&mut self, cursor: &mut Cursor) {
         // TODO
+        let line_len = self.length_of_line(cursor.line);
+        let mut buf = self.current_buffer();
+        buf.split_line_into_two_at(cursor.line, cursor.column);
+        cursor.line += 1;
+        cursor.column = 0;
+
     }
     /// Inserts a backspace at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_backspace(&mut self, cursor: &mut Cursor) {
+    pub fn insert_backspace_at(&mut self, cursor: &mut Cursor) {
         // TODO
     }
     /// Inserts a character at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_char(&mut self, c: char, cursor: &mut Cursor) {
+    pub fn insert_char_at(&mut self, c: char, cursor: &mut Cursor) {
         // BUG: Doesn't work for most non-ascii utf8 text. :(
-        self.current_buffer().insert_char(c, cursor.line as usize, cursor.column as usize);
+        self.current_buffer().insert_char_at(c, cursor.line as usize, cursor.column as usize);
         cursor.column += 1;
     }
     /// Returns the current buffer
@@ -111,16 +117,35 @@ impl Buffer {
         self.dirty = false;
         Ok(())
     }
+    /// Inserts a newline
+    pub fn insert_newline_at(&mut self, index: usize, content: String) {
+        if index == self.lines.len() {
+            self.push_newline(content);
+        } else {
+            self.lines.insert(index, content);
+        }
+    }
     /// Adds a new line at the end of the text
-    pub fn push_newline(&mut self) {
-        self.lines.push(String::new());
+    pub fn push_newline(&mut self, content: String) {
+        self.lines.push(content);
     }
     /// Returns a line of text as a String
     pub fn get_line(&self, index: usize) -> &String {
         &self.lines[index]
     }
+    /// Splits the line at `line` into two lines at column.
+    pub fn split_line_into_two_at(&mut self, line: usize, column: usize) {
+        let (start, rest) = self.split_line_at(line, column);
+        self.lines[line] = start;
+        self.insert_newline_at(line + 1, rest);
+    }
+    /// Splits a line into two Strings
+    pub fn split_line_at(&self, line: usize, column: usize) -> (String, String) {
+        let (a, b) = self.lines[line].split_at(column);
+        (String::from(a), String::from(b))
+    }
     /// Inserts a char at a specific line, column
-    pub fn insert_char(&mut self, c: char, line: usize, column: usize) {
+    pub fn insert_char_at(&mut self, c: char, line: usize, column: usize) {
         // TODO fix for unicode
         self.lines[line].insert(column, c);
     }
