@@ -5,6 +5,8 @@ use std::io::{stdin, Write};
 use termion::input::TermRead;
 use termion::event::*;
 
+static SAVE_PROMPT: &'static str = "Enter the filename to save to (Ctrl-c to exit)";
+
 pub struct Editor<'a> {
     frontend: &'a mut Frontend,
     backend: &'a mut Backend,
@@ -34,6 +36,16 @@ impl<'a> Editor<'a> {
                     Event::Key(Key::Char('\n')) => self.backend.insert_newline_at(&mut self.cursor),
                     Event::Key(Key::Backspace) => self.backend.insert_backspace_at(&mut self.cursor),
                     Event::Key(Key::Char(c)) => self.backend.insert_char_at(c, &mut self.cursor),
+                    Event::Key(Key::Ctrl('s')) => {
+                        if let &Some(_) = self.backend.filename() {
+                            self.backend.save();
+                        } else {
+                            if let Some(name) = self.frontend.prompt_for_text(SAVE_PROMPT) {
+                                self.backend.set_filename(Some(name));
+                                self.backend.save().unwrap();
+                            }
+                        }
+                    }
                     _ => {},
                 },
                 Err(e) => panic!("Error: {}", e),

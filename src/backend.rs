@@ -17,11 +17,15 @@ pub struct Backend {
 impl Backend {
     /// Constructs and returns a new Backend from the command line arguments
     pub fn new() -> Backend {
+        // TODO: Replace with real argument parsing. In editor.rs, maybe?
+        let arg = ::std::env::args().nth(1);
+        let buffers = if let Some(filename) = arg {
+            vec![Buffer::from_file(filename).unwrap()]
+        } else {
+            vec![Buffer::new()]
+        };
         Backend {
-            buffers: vec![Buffer::from_file(
-                // TODO: Replace with real argument parsing. In editor.rs, maybe?
-                ::std::env::args().nth(1).unwrap_or(String::from("test.txt"))
-            ).unwrap()],
+            buffers: buffers,
             current: 0,
         }
     }
@@ -47,7 +51,6 @@ impl Backend {
         buf.split_line_into_two_at(cursor.line, cursor.column);
         cursor.line += 1;
         cursor.column = 0;
-
     }
     /// Inserts a backspace at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
@@ -81,6 +84,19 @@ impl Backend {
     // TODO: Does this need to be public?
     pub fn current_buffer(&mut self) -> &mut Buffer {
         &mut self.buffers[self.current]
+    }
+
+    /// Returns the filename of the current buffer as an Option<String>
+    pub fn filename(&mut self) -> &Option<String> {
+        &self.current_buffer().filename
+    }
+    /// Sets the filename of the current buffer
+    pub fn set_filename(&mut self, name: Option<String>) {
+        self.current_buffer().filename = name
+    }
+    /// Saves the current buffer to a file
+    pub fn save(&mut self) -> io::Result<()> {
+        self.current_buffer().save()
     }
 }
 
@@ -143,6 +159,7 @@ impl Buffer {
     /// Adds a new line at the end of the text
     pub fn push_newline(&mut self, content: String) {
         self.lines.push(content);
+        self.dirty = true;
     }
     /// Returns a line of text as a String
     pub fn get_line(&self, index: usize) -> &String {
@@ -153,6 +170,7 @@ impl Buffer {
         let (start, rest) = self.split_line_at(line, column);
         self.lines[line] = start;
         self.insert_newline_at(line + 1, rest);
+        self.dirty = true;
     }
     /// Splits a line into two Strings
     pub fn split_line_at(&self, line: usize, column: usize) -> (String, String) {
@@ -163,15 +181,18 @@ impl Buffer {
     pub fn insert_char_at(&mut self, c: char, line: usize, column: usize) {
         // TODO fix for unicode
         self.lines[line].insert(column, c);
+        self.dirty = true;
     }
     /// Moves the line at `line` into the line before it and removes it.
     pub fn join_lines_at(&mut self, line: usize) {
         assert!(line >= 1, "Tried to move first line to the -1 line!");
         let s = self.lines.remove(line);
         self.lines[line - 1].push_str(&s);
+        self.dirty = true;
     }
     /// Deletes the character at `line`, `column`.
     pub fn delete_char_at(&mut self, line: usize, column: usize) {
         self.lines[line].remove(column);
+        self.dirty = true;
     }
 }

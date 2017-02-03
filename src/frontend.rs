@@ -80,8 +80,6 @@ impl Frontend {
         let (w, h) = termion::terminal_size().unwrap();
         (w as usize, h as usize)
     }
-
-    // TODO
     /// Prompts for a line of text
     pub fn prompt_for_text(&mut self, prompt: &str) -> Option<String> {
         let (width, height) = termion::terminal_size().unwrap();
@@ -98,6 +96,9 @@ impl Frontend {
         write!(self.stdout, "{}{}", color::Fg(color::Reset), color::Bg(color::Reset)).unwrap();
         input
     }
+    /// Reads a line of text from the user.
+    /// TODO: Fix for Unicode. I think that the actual user input is handled
+    /// correctly, but echoing the typed characters may not be.
     fn read_line(&mut self) -> Option<String> {
         let mut buf = Vec::with_capacity(30);
         loop {
