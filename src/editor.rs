@@ -25,8 +25,8 @@ impl<'a> Editor<'a> {
         self.draw();
         for event in stdin().events() {
             match event {
-                Ok(Event::Key(Key::Esc)) => break,
                 Ok(ev) => match ev {
+                    Event::Key(Key::Esc) => break,
                     Event::Key(Key::Up) => self.cursor.move_up(self.backend.current_lines()),
                     Event::Key(Key::Down) => self.cursor.move_down(self.backend.current_lines()),
                     Event::Key(Key::Left) => self.cursor.move_left(self.backend.current_lines()),

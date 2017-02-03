@@ -28,10 +28,10 @@ impl Frontend {
         write!(self.stdout, "{}", clear::All).unwrap();
     }
     pub fn draw_lines(&mut self, cursor: &Cursor, lines: &[String]) {
-        let (_, height) = termion::terminal_size().unwrap();
+        let (width, height) = self.terminal_size();
         let num_lines = lines.len();
-        let start = if cursor.line > height as usize { cursor.line } else { 0 };
-        for (y, line_number) in (start..start + height as usize).enumerate() {
+        let start = if cursor.line > height { cursor.line - height } else { 0 };
+        for (y, line_number) in (start..start + height).enumerate() {
             self.goto_term(0, y as u16);
             if line_number < num_lines {
                 write!(self.stdout, "{}{}{} {}",
@@ -66,12 +66,59 @@ impl Frontend {
     }
     /// Moves the cursor to the position specified by the Cursor
     pub fn move_cursor(&mut self, cursor: &Cursor) {
-        //let (width, height) = termion::terminal_size().unwrap();
+        let (width, height) = self.terminal_size();
         let x = (cursor.column + 4) as u16;
-        let y = cursor.line as u16;
+        let y = if cursor.line > height {
+            cursor.line as u16
+        } else {
+            cursor.line as u16
+        };
         self.goto_term(x, y)
     }
+    /// Returns the size of the terminal as (width, height)
+    pub fn terminal_size(&self) -> (usize, usize) {
+        let (w, h) = termion::terminal_size().unwrap();
+        (w as usize, h as usize)
+    }
+
+    // TODO
+    /// Prompts for a line of text
+    pub fn prompt_for_text(&mut self, prompt: &str) -> Option<String> {
+        let (width, height) = termion::terminal_size().unwrap();
+        self.goto_term(0, height - 1);
+        write!(&mut self.stdout, "{}{}{}{}",
+               termion::clear::CurrentLine,
+               termion::color::Bg(color::White),
+               termion::color::Fg(color::Black),
+               leftpad("", width as usize)).unwrap();
+        self.goto_term(0, height - 1);
+        write!(&mut self.stdout, "{}: ", prompt).unwrap();
+        self.flush();
+        let input = self.read_line();
+        write!(self.stdout, "{}{}", color::Fg(color::Reset), color::Bg(color::Reset)).unwrap();
+        input
+    }
+    fn read_line(&mut self) -> Option<String> {
+        let mut buf = Vec::with_capacity(30);
+        loop {
+            let mut b = [0; 1];
+            self.stdin.read(&mut b[..]).unwrap();
+            match b[0] {
+                0 | 3 | 4 => return None,
+                0x7f if buf.len() > 0 => { buf.pop(); },
+                b'\n' | b'\r' => break,
+                c => {
+                    buf.push(c);
+                    write!(&mut self.stdout, "{}", char::from(c)).unwrap();
+                    self.flush();
+                },
+            };
+        }
+        Some(String::from_utf8(buf).unwrap())
+    }
+
 }
+
 
 impl Drop for Frontend {
     /// Clean up the terminal after the we go out of scope.
