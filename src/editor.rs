@@ -45,7 +45,7 @@ impl<'a> Editor<'a> {
                                 self.backend.save().unwrap();
                             }
                         }
-                    }
+                    },
                     _ => {},
                 },
                 Err(e) => panic!("Error: {}", e),
@@ -55,7 +55,9 @@ impl<'a> Editor<'a> {
     }
     fn draw(&mut self) {
         self.frontend.clear_screen();
-        self.frontend.draw_lines(&self.cursor, self.backend.current_lines());
+        self.frontend.draw(&self.cursor,
+                           self.backend.filename(),
+                           self.backend.current_lines());
         self.frontend.move_cursor(&self.cursor);
         self.frontend.flush();
     }

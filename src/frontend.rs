@@ -2,7 +2,7 @@ use std::io;
 use std::io::{Read, Write, Stdin, stdin, Stdout, stdout};
 use std::ops::Drop;
 use termion;
-use termion::{clear, color, event};
+use termion::{clear, color, event, style};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use left_pad::leftpad;
@@ -27,12 +27,26 @@ impl Frontend {
     pub fn clear_screen(&mut self) {
         write!(self.stdout, "{}", clear::All).unwrap();
     }
-    pub fn draw_lines(&mut self, cursor: &Cursor, lines: &[String]) {
+    pub fn draw(&mut self, cursor: &Cursor, filename: &Option<String>, lines: &[String]) {
         let (width, height) = self.terminal_size();
         let num_lines = lines.len();
         let start = if cursor.line > height { cursor.line - height } else { 0 };
-        for (y, line_number) in (start..start + height).enumerate() {
-            self.goto_term(0, y as u16);
+        let name = filename.clone().unwrap_or(String::from("**no filename**"));
+        let padding = (width - name.len()) / 2;
+        let need_extra = padding*2+name.len() != width;
+        self.goto_term(0, 0);
+        write!(&mut self.stdout, "{}{}{}{}{}{}{}{}",
+               color::Bg(color::White),
+               color::Fg(color::Black),
+               leftpad(" ", padding),
+               name,
+               leftpad(" ", padding),
+               if need_extra { " " } else { "" },
+               color::Fg(color::Reset),
+               color::Bg(color::Reset),
+        ).unwrap();
+        for (y, line_number) in (start..start + height - 1).enumerate() {
+            self.goto_term(0, (y + 1) as u16);
             if line_number < num_lines {
                 write!(self.stdout, "{}{}{} {}",
                        color::Fg(color::Cyan),
@@ -71,7 +85,7 @@ impl Frontend {
         let y = if cursor.line > height {
             cursor.line as u16
         } else {
-            cursor.line as u16
+            (cursor.line + 1) as u16
         };
         self.goto_term(x, y)
     }

@@ -32,22 +32,22 @@ impl Backend {
     /// Returns the lines of text from the buffer that is being edited
     // TODO: Make this higher level so that it is easier to change
     // the buffer representation? Maybe as an iterator?
-    pub fn current_lines(&mut self) -> &Vec<String> {
+    pub fn current_lines(&self) -> &Vec<String> {
         &self.current_buffer().lines
     }
     /// Returns the number of lines in the current buffer.
-    pub fn number_of_lines(&mut self) -> usize {
+    pub fn number_of_lines(&self) -> usize {
         self.current_buffer().lines.len()
     }
     /// Returns the length of the line in the current buffer
-    pub fn length_of_line(&mut self, line: usize) -> usize {
+    pub fn length_of_line(&self, line: usize) -> usize {
         self.current_buffer().lines[line].len()
     }
     /// Inserts a newline at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
     pub fn insert_newline_at(&mut self, cursor: &mut Cursor) {
         let line_len = self.length_of_line(cursor.line);
-        let mut buf = self.current_buffer();
+        let mut buf = self.current_buffer_mut();
         buf.split_line_into_two_at(cursor.line, cursor.column);
         cursor.line += 1;
         cursor.column = 0;
@@ -60,7 +60,7 @@ impl Backend {
             // We are at the top left corner and there is nothing to delete.
             return;
         }
-        let mut buf = self.current_buffer();
+        let mut buf = self.current_buffer_mut();
         if cursor.column == 0 {
             cursor.column = buf.lines[cursor.line - 1].len();
             buf.join_lines_at(cursor.line);
@@ -77,26 +77,31 @@ impl Backend {
     /// the Cursor to reflect the new position
     pub fn insert_char_at(&mut self, c: char, cursor: &mut Cursor) {
         // BUG: Doesn't work for most non-ascii utf8 text. :(
-        self.current_buffer().insert_char_at(c, cursor.line as usize, cursor.column as usize);
+        self.current_buffer_mut().insert_char_at(c, cursor.line as usize, cursor.column as usize);
         cursor.column += 1;
     }
     /// Returns the current buffer
     // TODO: Does this need to be public?
-    pub fn current_buffer(&mut self) -> &mut Buffer {
+    pub fn current_buffer(&self) -> &Buffer {
+        &self.buffers[self.current]
+    }
+    /// Returns the current buffer as a mutable reference
+    // TODO: Does this need to be public?
+    pub fn current_buffer_mut(&mut self) -> &mut Buffer {
         &mut self.buffers[self.current]
     }
 
     /// Returns the filename of the current buffer as an Option<String>
-    pub fn filename(&mut self) -> &Option<String> {
+    pub fn filename(&self) -> &Option<String> {
         &self.current_buffer().filename
     }
     /// Sets the filename of the current buffer
     pub fn set_filename(&mut self, name: Option<String>) {
-        self.current_buffer().filename = name
+        self.current_buffer_mut().filename = name
     }
     /// Saves the current buffer to a file
     pub fn save(&mut self) -> io::Result<()> {
-        self.current_buffer().save()
+        self.current_buffer_mut().save()
     }
 }
 
