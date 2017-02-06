@@ -10,7 +10,6 @@ static SAVE_PROMPT: &'static str = "Enter the filename to save to (Ctrl-c to exi
 pub struct Editor<'a> {
     frontend: &'a mut Frontend,
     backend: &'a mut Backend,
-    cursor: Cursor,
 }
 
 impl<'a> Editor<'a> {
@@ -18,7 +17,6 @@ impl<'a> Editor<'a> {
         Editor {
             frontend: frontend,
             backend: backend,
-            cursor: Cursor::new(0, 0),
         }
     }
     pub fn start(&mut self) {
@@ -29,16 +27,16 @@ impl<'a> Editor<'a> {
             match event {
                 Ok(ev) => match ev {
                     Event::Key(Key::Esc) => break,
-                    Event::Key(Key::Up) => self.cursor.move_up(self.backend.current_lines()),
-                    Event::Key(Key::Down) => self.cursor.move_down(self.backend.current_lines()),
-                    Event::Key(Key::Left) => self.cursor.move_left(self.backend.current_lines()),
-                    Event::Key(Key::Right) => self.cursor.move_right(self.backend.current_lines()),
-                    Event::Key(Key::Char('\n')) => self.backend.insert_newline_at(&mut self.cursor),
-                    Event::Key(Key::Backspace) => self.backend.insert_backspace_at(&mut self.cursor),
-                    Event::Key(Key::Char(c)) => self.backend.insert_char_at(c, &mut self.cursor),
+                    Event::Key(Key::Up) => self.backend.move_up(),
+                    Event::Key(Key::Down) => self.backend.move_down(),
+                    Event::Key(Key::Left) => self.backend.move_left(),
+                    Event::Key(Key::Right) => self.backend.move_right(),
+                    Event::Key(Key::Char('\n')) => self.backend.insert_newline(),
+                    Event::Key(Key::Backspace) => self.backend.insert_backspace(),
+                    Event::Key(Key::Char(c)) => self.backend.insert_char(c),
                     Event::Key(Key::Ctrl('s')) => {
                         if let &Some(_) = self.backend.filename() {
-                            self.backend.save();
+                            self.backend.save().unwrap();
                         } else {
                             if let Some(name) = self.frontend.prompt_for_text(SAVE_PROMPT) {
                                 self.backend.set_filename(Some(name));
@@ -46,6 +44,7 @@ impl<'a> Editor<'a> {
                             }
                         }
                     },
+                    //Event::Key(Key::Ctrl('n')) => self.backend.new_empty_buffer(),
                     _ => {},
                 },
                 Err(e) => panic!("Error: {}", e),
@@ -55,10 +54,10 @@ impl<'a> Editor<'a> {
     }
     fn draw(&mut self) {
         self.frontend.clear_screen();
-        self.frontend.draw(&self.cursor,
+        self.frontend.draw(self.backend.cursor(),
                            self.backend.filename(),
                            self.backend.current_lines());
-        self.frontend.move_cursor(&self.cursor);
+        self.frontend.move_cursor(self.backend.cursor());
         self.frontend.flush();
     }
 }

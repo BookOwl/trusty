@@ -45,40 +45,56 @@ impl Backend {
     }
     /// Inserts a newline at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_newline_at(&mut self, cursor: &mut Cursor) {
-        let line_len = self.length_of_line(cursor.line);
-        let mut buf = self.current_buffer_mut();
-        buf.split_line_into_two_at(cursor.line, cursor.column);
+    pub fn insert_newline(&mut self) {
+        let (x, y) = {
+            let cursor = self.cursor();
+            (cursor.line, cursor.column)
+        };
+        {
+            let line_len = self.length_of_line(x);
+            let mut buf = self.current_buffer_mut();
+            buf.split_line_into_two_at(x, y);
+        };
+        let mut cursor = self.cursor_mut();
         cursor.line += 1;
         cursor.column = 0;
     }
     /// Inserts a backspace at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_backspace_at(&mut self, cursor: &mut Cursor) {
-        // TODO
-        if cursor.column == 0 && cursor.line == 0 {
+    pub fn insert_backspace(&mut self) {
+        let (x, y) = {
+            let cursor = self.cursor();
+            (cursor.line, cursor.column)
+        };
+        if x == 0 && y == 0 {
             // We are at the top left corner and there is nothing to delete.
             return;
         }
-        let mut buf = self.current_buffer_mut();
-        if cursor.column == 0 {
-            cursor.column = buf.lines[cursor.line - 1].len();
-            buf.join_lines_at(cursor.line);
-            cursor.line -= 1;
+        if y == 0 {
+            //let mut buf = self.current_buffer_mut();
+            self.cursor_mut().column = self.current_buffer().lines[x - 1].len();
+            self.current_buffer_mut().join_lines_at(y);
+            self.cursor_mut().line -= 1;
         } else {
             // We remove the char at the column before the cursor because
             // when you use backspace you are trying to delete what
             // comes before.
-            buf.delete_char_at(cursor.line, cursor.column - 1);
-            cursor.column -= 1;
+            self.current_buffer_mut().delete_char_at(x, y - 1);
+            self.cursor_mut().column -= 1;
         }
     }
     /// Inserts a character at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
-    pub fn insert_char_at(&mut self, c: char, cursor: &mut Cursor) {
+    pub fn insert_char(&mut self, c: char) {
         // BUG: Doesn't work for most non-ascii utf8 text. :(
-        self.current_buffer_mut().insert_char_at(c, cursor.line as usize, cursor.column as usize);
-        cursor.column += 1;
+        let (x, y) = {
+            let cursor = self.cursor();
+            (cursor.line as usize, cursor.column as usize)
+        };
+        {
+            self.current_buffer_mut().insert_char_at(c, x, y);
+        }
+        self.cursor_mut().column += 1;
     }
     /// Returns the current buffer
     // TODO: Does this need to be public?
@@ -90,7 +106,6 @@ impl Backend {
     pub fn current_buffer_mut(&mut self) -> &mut Buffer {
         &mut self.buffers[self.current]
     }
-
     /// Returns the filename of the current buffer as an Option<String>
     pub fn filename(&self) -> &Option<String> {
         &self.current_buffer().filename
@@ -102,6 +117,47 @@ impl Backend {
     /// Saves the current buffer to a file
     pub fn save(&mut self) -> io::Result<()> {
         self.current_buffer_mut().save()
+    }
+    /// Switches to the next buffer.
+    pub fn switch_to_next_buffer(&mut self) {
+        self.current = (self.current + 1) % self.buffers.len();
+    }
+    /// Switches to the previous buffer.
+    pub fn switch_to_previous_buffer(&mut self) {
+        self.current = (self.current - 1) % self.buffers.len();
+    }
+    /// Opens a new, empty buffer
+    pub fn new_empty_buffer(&mut self) {
+        self.buffers.insert(self.current + 1, Buffer::new());
+        self.switch_to_next_buffer();
+    }
+    /// Returns a reference to the current buffer's Cursor.
+    pub fn cursor(&self) -> &Cursor {
+        &self.current_buffer().cursor
+    }
+    /// Returns a mutable reference to the current buffer's Cursor.
+    pub fn cursor_mut(&mut self) -> &mut Cursor {
+        &mut self.current_buffer_mut().cursor
+    }
+    /// Moves the cursor up
+    pub fn move_up(&mut self) {
+        let lines = self.current_lines().clone();
+        self.cursor_mut().move_up(&lines)
+    }
+    /// Moves the cursor down
+    pub fn move_down(&mut self) {
+        let lines = self.current_lines().clone();
+        self.cursor_mut().move_down(&lines)
+    }
+    /// Moves the cursor left
+    pub fn move_left(&mut self) {
+        let lines = self.current_lines().clone();
+        self.cursor_mut().move_left(&lines)
+    }
+    /// Moves the cursor right
+    pub fn move_right(&mut self) {
+        let lines = self.current_lines().clone();
+        self.cursor_mut().move_right(&lines)
     }
 }
 
@@ -115,6 +171,8 @@ pub struct Buffer {
     /// The saved state of the buffer. If dirty is true then there are
     /// unsaved modifications to the Buffer that haven't saved.
     pub dirty: bool,
+    /// The cursor position in the buffer.
+    cursor: Cursor,
 }
 impl Buffer {
     /// Constructs a new, empty buffer that doesn't have a filename to save to.
@@ -123,6 +181,7 @@ impl Buffer {
             filename: None,
             lines: vec![String::new()],
             dirty: false,
+            cursor: Cursor::new(0, 0),
         }
     }
     /// Contructs a new buffer from the contents of a file.
@@ -137,7 +196,8 @@ impl Buffer {
         Ok(Buffer {
             filename: Some(filename),
             lines: lines,
-            dirty: false
+            dirty: false,
+            cursor: Cursor::new(0, 0)
         })
     }
     /// Saves the contents of the buffer to the file
