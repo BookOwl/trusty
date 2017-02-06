@@ -1,4 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
+/// The Cursor holds the line and column of the users cursor.
 pub struct Cursor {
     pub line: usize,
     pub column: usize,

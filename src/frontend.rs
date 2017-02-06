@@ -8,6 +8,8 @@ use termion::raw::IntoRawMode;
 use left_pad::leftpad;
 use cursor::Cursor;
 
+// The Frontend is responsible for rendering the state of the editor
+// to the screen and interacting with the user.
 pub struct Frontend {
     stdin: Stdin,
     stdout: termion::raw::RawTerminal<Stdout>,
@@ -27,14 +29,18 @@ impl Frontend {
     pub fn clear_screen(&mut self) {
         write!(self.stdout, "{}", clear::All).unwrap();
     }
+    /// Draws the state of the editor to the screen.
     pub fn draw(&mut self, cursor: &Cursor, filename: &Option<String>, lines: &[String]) {
         let (width, height) = self.terminal_size();
         let num_lines = lines.len();
+        // The index of the first line of text that is rendered.
         let start = if cursor.line > height { cursor.line - height } else { 0 };
+        // The filename of the current buffer or a no filename message.
         let name = filename.clone().unwrap_or(String::from("**no filename**"));
         let padding = (width - name.len()) / 2;
         let need_extra = padding*2+name.len() != width;
         self.goto_term(0, 0);
+        // Draw the title bar.
         write!(&mut self.stdout, "{}{}{}{}{}{}{}{}",
                color::Bg(color::White),
                color::Fg(color::Black),
@@ -45,9 +51,11 @@ impl Frontend {
                color::Fg(color::Reset),
                color::Bg(color::Reset),
         ).unwrap();
+        // Draw the lines of text.
         for (y, line_number) in (start..start + height - 1).enumerate() {
             self.goto_term(0, (y + 1) as u16);
             if line_number < num_lines {
+                // Draw the line of text
                 write!(self.stdout, "{}{}{} {}",
                        color::Fg(color::Cyan),
                        leftpad(format!("{}", line_number + 1), 3),
@@ -55,6 +63,7 @@ impl Frontend {
                        lines[line_number],
                 ).unwrap();
             } else {
+                // Draw a ~ to show that there is no line.
                 write!(self.stdout, "{}  ~{}",
                        color::Fg(color::Cyan),
                        color::Fg(color::Reset),
@@ -98,15 +107,20 @@ impl Frontend {
     pub fn prompt_for_text(&mut self, prompt: &str) -> Option<String> {
         let (width, height) = termion::terminal_size().unwrap();
         self.goto_term(0, height - 1);
+        // Draw the background.
         write!(&mut self.stdout, "{}{}{}{}",
                termion::clear::CurrentLine,
                termion::color::Bg(color::White),
                termion::color::Fg(color::Black),
                leftpad("", width as usize)).unwrap();
         self.goto_term(0, height - 1);
+        // Draw the prompt.
         write!(&mut self.stdout, "{}: ", prompt).unwrap();
+        // Show it.
         self.flush();
+        // Get the input from the user,
         let input = self.read_line();
+        // Reset the forground and background.
         write!(self.stdout, "{}{}", color::Fg(color::Reset), color::Bg(color::Reset)).unwrap();
         input
     }
@@ -114,21 +128,38 @@ impl Frontend {
     /// TODO: Fix for Unicode. I think that the actual user input is handled
     /// correctly, but echoing the typed characters may not be.
     fn read_line(&mut self) -> Option<String> {
+        // Start with a buffer of size 40 so that small inputs don't require
+        // reallocating the buffer.
         let mut buf = Vec::with_capacity(30);
         loop {
+            // Get one byte of input
             let mut b = [0; 1];
             self.stdin.read(&mut b[..]).unwrap();
             match b[0] {
                 0 | 3 | 4 => return None,
-                0x7f if buf.len() > 0 => { buf.pop(); },
+                // 0x7f is backspace
+                0x7f if buf.len() > 0 => {
+                    // Delete the last character typed
+                    buf.pop();
+                    // Clear the last character from the screen
+                    write!(&mut self.stdout, "{}{}",
+                           termion::cursor::Left(1),
+                           termion::clear::UntilNewline);
+                    self.flush();
+                },
+                0x7f => {},
+                // Newline or CR ends the input
                 b'\n' | b'\r' => break,
                 c => {
+                    // Add the typed character to the input
                     buf.push(c);
+                    // Draw it to the screen
                     write!(&mut self.stdout, "{}", char::from(c)).unwrap();
                     self.flush();
                 },
             };
         }
+        // Convert the buffer to a String.
         Some(String::from_utf8(buf).unwrap())
     }
 

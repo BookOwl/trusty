@@ -7,6 +7,7 @@ use cursor::Cursor;
 /// It does this by managing a Vec of Buffers that actually edit the text.
 /// By making the Backend handle the Buffers, the rest of the editor doesn't have to
 /// worry about using the right buffer.
+#[derive(Debug)]
 pub struct Backend {
     /// The Buffers being edited
     buffers: Vec<Buffer>,
@@ -46,15 +47,21 @@ impl Backend {
     /// Inserts a newline at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
     pub fn insert_newline(&mut self) {
+        // Get the (x, y) location of the cursor.
+        // This happens in a seperate block to keep the borrow checker happy
         let (x, y) = {
             let cursor = self.cursor();
             (cursor.line, cursor.column)
         };
         {
+            // Inserts the new line at the right place.
+            // This is in a seperate block to make sure that buf gets destroyed
+            // before we mutate self.cursor.
             let line_len = self.length_of_line(x);
             let mut buf = self.current_buffer_mut();
             buf.split_line_into_two_at(x, y);
         };
+        // Updates the cursor to the new position
         let mut cursor = self.cursor_mut();
         cursor.line += 1;
         cursor.column = 0;
@@ -62,6 +69,8 @@ impl Backend {
     /// Inserts a backspace at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
     pub fn insert_backspace(&mut self) {
+        // Get the (x, y) location of the cursor.
+        // This happens in a seperate block to keep the borrow checker happy
         let (x, y) = {
             let cursor = self.cursor();
             (cursor.line, cursor.column)
@@ -71,7 +80,8 @@ impl Backend {
             return;
         }
         if y == 0 {
-            //let mut buf = self.current_buffer_mut();
+            // If we are at the begining of the line we just move the current
+            // line to the end of the previous line.
             self.cursor_mut().column = self.current_buffer().lines[x - 1].len();
             self.current_buffer_mut().join_lines_at(y);
             self.cursor_mut().line -= 1;
@@ -85,15 +95,20 @@ impl Backend {
     }
     /// Inserts a character at the position given by the Cursor and updates
     /// the Cursor to reflect the new position
+    // BUG: Doesn't work for most non-ascii utf8 text. :(
     pub fn insert_char(&mut self, c: char) {
-        // BUG: Doesn't work for most non-ascii utf8 text. :(
+        // Get the (x, y) location of the cursor.
+        // This happens in a seperate block to keep the borrow checker happy
         let (x, y) = {
             let cursor = self.cursor();
             (cursor.line as usize, cursor.column as usize)
         };
         {
+            // Update the buffer in a seperate block to
+            // keep the borrow checker happy.
             self.current_buffer_mut().insert_char_at(c, x, y);
         }
+        // Update the cursor.
         self.cursor_mut().column += 1;
     }
     /// Returns the current buffer
@@ -139,6 +154,10 @@ impl Backend {
     pub fn cursor_mut(&mut self) -> &mut Cursor {
         &mut self.current_buffer_mut().cursor
     }
+    
+    // TODO: Make these function not need to clone the contents
+    // of the text editor.
+
     /// Moves the cursor up
     pub fn move_up(&mut self) {
         let lines = self.current_lines().clone();
@@ -163,6 +182,7 @@ impl Backend {
 
 /// A Buffer contains the text being edited and applies the edits to it.
 /// It is also responsible for opening and saving files.
+#[derive(Debug)]
 pub struct Buffer {
     /// The filename that the Buffer gets saved to.
     pub filename: Option<String>,
