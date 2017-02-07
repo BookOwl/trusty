@@ -1,5 +1,3 @@
-![Trusty logo](trusty-logo.png)
-
 [![Build Status](https://travis-ci.org/BookOwl/trusty.svg?branch=master)](https://travis-ci.org/BookOwl/trusty)
 
 a mess of code that will (hopefully) one day be a console text editor
