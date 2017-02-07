@@ -1,7 +1,6 @@
 use frontend::Frontend;
 use backend::Backend;
-use cursor::Cursor;
-use std::io::{stdin, Write};
+use std::io::stdin;
 use termion::input::TermRead;
 use termion::event::*;
 
@@ -51,13 +50,11 @@ impl<'a> Editor<'a> {
                     Event::Key(Key::Char(c)) => self.backend.insert_char(c),
                     // Ctrl-s saves the current buffer.
                     Event::Key(Key::Ctrl('s')) => {
-                        if let &Some(_) = self.backend.filename() {
+                        if self.backend.filename().is_some() {
                             self.backend.save().unwrap();
-                        } else {
-                            if let Some(name) = self.frontend.prompt_for_text(SAVE_PROMPT) {
-                                self.backend.set_filename(Some(name));
-                                self.backend.save().unwrap();
-                            }
+                        } else if let Some(name) = self.frontend.prompt_for_text(SAVE_PROMPT) {
+                            self.backend.set_filename(Some(name));
+                            self.backend.save().unwrap();
                         }
                     },
                     //Event::Key(Key::Ctrl('n')) => self.backend.new_empty_buffer(),

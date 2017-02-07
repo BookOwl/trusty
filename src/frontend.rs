@@ -1,9 +1,7 @@
-use std::io;
 use std::io::{Read, Write, Stdin, stdin, Stdout, stdout};
 use std::ops::Drop;
 use termion;
-use termion::{clear, color, event, style};
-use termion::input::TermRead;
+use termion::{clear, color};
 use termion::raw::IntoRawMode;
 use left_pad::leftpad;
 use cursor::Cursor;
@@ -36,7 +34,7 @@ impl Frontend {
         // The index of the first line of text that is rendered.
         let start = if cursor.line > height { cursor.line - height } else { 0 };
         // The filename of the current buffer or a no filename message.
-        let name = filename.clone().unwrap_or(String::from("**no filename**"));
+        let name = filename.clone().unwrap_or_else(|| String::from("**no filename**"));
         let padding = (width - name.len()) / 2;
         let need_extra = padding*2+name.len() != width;
         self.goto_term(0, 0);
@@ -89,7 +87,7 @@ impl Frontend {
     }
     /// Moves the cursor to the position specified by the Cursor
     pub fn move_cursor(&mut self, cursor: &Cursor) {
-        let (width, height) = self.terminal_size();
+        let (_, height) = self.terminal_size();
         let x = (cursor.column + 4) as u16;
         let y = if cursor.line > height {
             cursor.line as u16
@@ -134,17 +132,17 @@ impl Frontend {
         loop {
             // Get one byte of input
             let mut b = [0; 1];
-            self.stdin.read(&mut b[..]).unwrap();
+            self.stdin.read_exact(&mut b[..]).unwrap();
             match b[0] {
                 0 | 3 | 4 => return None,
                 // 0x7f is backspace
-                0x7f if buf.len() > 0 => {
+                0x7f if !buf.is_empty() => {
                     // Delete the last character typed
                     buf.pop();
                     // Clear the last character from the screen
                     write!(&mut self.stdout, "{}{}",
                            termion::cursor::Left(1),
-                           termion::clear::UntilNewline);
+                           termion::clear::UntilNewline).unwrap();
                     self.flush();
                 },
                 0x7f => {},

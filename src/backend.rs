@@ -57,7 +57,6 @@ impl Backend {
             // Inserts the new line at the right place.
             // This is in a seperate block to make sure that buf gets destroyed
             // before we mutate self.cursor.
-            let line_len = self.length_of_line(x);
             let mut buf = self.current_buffer_mut();
             buf.split_line_into_two_at(x, y);
         };
@@ -154,7 +153,7 @@ impl Backend {
     pub fn cursor_mut(&mut self) -> &mut Cursor {
         &mut self.current_buffer_mut().cursor
     }
-    
+
     // TODO: Make these function not need to clone the contents
     // of the text editor.
 
