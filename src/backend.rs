@@ -82,7 +82,7 @@ impl Backend {
             // If we are at the begining of the line we just move the current
             // line to the end of the previous line.
             self.cursor_mut().column = self.current_buffer().lines[x - 1].len();
-            self.current_buffer_mut().join_lines_at(y);
+            self.current_buffer_mut().join_lines_at(x);
             self.cursor_mut().line -= 1;
         } else {
             // We remove the char at the column before the cursor because
@@ -138,11 +138,31 @@ impl Backend {
     }
     /// Switches to the previous buffer.
     pub fn switch_to_previous_buffer(&mut self) {
-        self.current = (self.current - 1) % self.buffers.len();
+        if self.current == 0 {
+            // We need to treat 0 specially because self.current is
+            // an usize, and if you try and subtract 1 from it
+            // BAD THINGS happen (ie, panics. At least it's not UB. :P)
+            self.current = self.buffers.len() - 1;
+        } else {
+            self.current = (self.current - 1) % self.buffers.len();
+        }
+    }
+    /// Removes the current buffer.
+    /// If it is the only one it also adds a new empty buffer.
+    pub fn remove_current_buffer(&mut self) {
+        self.buffers.remove(self.current);
+        if self.buffers.is_empty() {
+            self.buffers.push(Buffer::new());
+        }
     }
     /// Opens a new, empty buffer
     pub fn new_empty_buffer(&mut self) {
         self.buffers.insert(self.current + 1, Buffer::new());
+        self.switch_to_next_buffer();
+    }
+    /// Opens a new buffer from a filename
+    pub fn new_buffer_from_filename(&mut self, name: String) {
+        self.buffers.insert(self.current + 1, Buffer::from_file(name).unwrap());
         self.switch_to_next_buffer();
     }
     /// Returns a reference to the current buffer's Cursor.
@@ -176,6 +196,10 @@ impl Backend {
     pub fn move_right(&mut self) {
         let lines = self.current_lines().clone();
         self.cursor_mut().move_right(&lines)
+    }
+    /// Is the current buffer dirty (modified)?
+    pub fn is_dirty(&self) -> bool {
+        self.current_buffer().dirty
     }
 }
 
@@ -269,7 +293,7 @@ impl Buffer {
     }
     /// Moves the line at `line` into the line before it and removes it.
     pub fn join_lines_at(&mut self, line: usize) {
-        assert!(line >= 1, "Tried to move first line to the -1 line!");
+        assert!(line > 0, "Tried to move first line to the -1 line!");
         let s = self.lines.remove(line);
         self.lines[line - 1].push_str(&s);
         self.dirty = true;

@@ -4,7 +4,8 @@ use std::io::stdin;
 use termion::input::TermRead;
 use termion::event::*;
 
-static SAVE_PROMPT: &'static str = "Enter the filename to save to (Ctrl-c to exit)";
+static SAVE_PROMPT: &'static str = "Enter the filename to save to";
+static REMOVE_WHILE_DIRTY: &'static str = "Do you really want to lose all your work?";
 
 /// The Editor struct is responsible recieving events
 /// from the user and directing the frontend and backend.
@@ -57,7 +58,20 @@ impl<'a> Editor<'a> {
                             self.backend.save().unwrap();
                         }
                     },
-                    //Event::Key(Key::Ctrl('n')) => self.backend.new_empty_buffer(),
+                    Event::Key(Key::Ctrl('n')) => self.backend.new_empty_buffer(),
+                    Event::Key(Key::Ctrl('o')) => {
+                        if let Some(name) = self.frontend.prompt_for_text("Enter filename to open") {
+                            self.backend.new_buffer_from_filename(name);
+                        }
+                    },
+                    Event::Key(Key::Ctrl('x')) => {
+                        if !self.backend.is_dirty() ||
+                            self.frontend.prompt_for_bool(REMOVE_WHILE_DIRTY) {
+                            self.backend.remove_current_buffer();
+                        }
+                    },
+                    Event::Key(Key::Ctrl('l')) => self.backend.switch_to_next_buffer(),
+                    Event::Key(Key::Ctrl('k')) => self.backend.switch_to_previous_buffer(),
                     _ => {},
                 },
                 // If an error occured, panic!

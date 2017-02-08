@@ -122,6 +122,15 @@ impl Frontend {
         write!(self.stdout, "{}{}", color::Fg(color::Reset), color::Bg(color::Reset)).unwrap();
         input
     }
+    /// Prompts for a yes/no response from the user
+    pub fn prompt_for_bool(&mut self, prompt: &str) -> bool {
+        let response = self.prompt_for_text(&format!("{} (y/n)", prompt));
+        if let Some(r) = response {
+            !r.is_empty() && r.chars().nth(0).unwrap() == 'y'
+        } else {
+            false
+        }
+    }
     /// Reads a line of text from the user.
     /// TODO: Fix for Unicode. I think that the actual user input is handled
     /// correctly, but echoing the typed characters may not be.
