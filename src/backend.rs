@@ -17,13 +17,15 @@ pub struct Backend {
 
 impl Backend {
     /// Constructs and returns a new Backend from the command line arguments
-    pub fn new() -> Backend {
-        // TODO: Replace with real argument parsing. In editor.rs, maybe?
-        let arg = ::std::env::args().nth(1);
-        let buffers = if let Some(filename) = arg {
-            vec![Buffer::from_file(filename).unwrap()]
-        } else {
+    pub fn new(files: Vec<String>) -> Backend {
+        let buffers = if files.is_empty() {
             vec![Buffer::new()]
+        } else {
+            let mut buffers = Vec::with_capacity(files.len());
+            for file in files {
+                buffers.push(Buffer::from_file(file).unwrap());
+            }
+            buffers
         };
         Backend {
             buffers: buffers,
