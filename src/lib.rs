@@ -1,4 +1,4 @@
-#[cfg_attr(feature = "cargo-clippy", allow(new_without_default))]
+#![cfg_attr(feature = "cargo-clippy", allow(new_without_default))]
 extern crate termion;
 extern crate left_pad;
 

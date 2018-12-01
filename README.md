@@ -9,7 +9,6 @@ A terminal text editor written in Rust.
 * Add syntax highlighting.
 * Add find-replace.
 * Add auto indention.
-* Add the ability to edit multiple files.
 * Figure out the best way to let end-users extend trusty. (scripts, maybe?)
 
 ## Building
